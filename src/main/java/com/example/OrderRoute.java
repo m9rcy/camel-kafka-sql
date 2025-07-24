@@ -12,7 +12,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.*;
 
-@Component
+//@Component
 public class OrderRoute extends RouteBuilder {
 
     @Override
@@ -66,7 +66,7 @@ public class OrderRoute extends RouteBuilder {
 
                 })
                 .log("got a body after ${body}")
-                .to("direct:insertOrder");
+                .to("direct:upsertOrder");
 
         // SELECT all pending orders
         from("timer:fetchOrders?repeatCount=1").autoStartup(false)
@@ -88,5 +88,29 @@ public class OrderRoute extends RouteBuilder {
             .to("sql:INSERT INTO [Order](id, name, description, effective_date, status) " +
                 "VALUES (:#id, :#name, :#description, :#effectiveDate, :#status)")
             .log("Inserted new order: ${body}");
+
+        from("direct:upsertOrder").autoStartup(true)
+                .process(exchange -> {
+                    OrderEntity order = exchange.getIn().getBody(OrderEntity.class);
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("id", order.getId());
+                    params.put("name", order.getName());
+                    params.put("description", order.getDescription());
+                    params.put("effectiveDate", order.getEffectiveDate());
+                    params.put("status", order.getStatus());
+                    exchange.getIn().setBody(params);
+                })
+                .to("sql:MERGE [Order] AS target " +
+                        "USING (SELECT :#id as id, :#name as name, :#description as description, " +
+                        ":#effectiveDate as effective_date, :#status as status) AS source " +
+                        "ON target.id = source.id " +
+                        "WHEN MATCHED AND (target.name != source.name OR target.description != source.description OR " +
+                        "target.effective_date != source.effective_date OR target.status != source.status) THEN " +
+                        "UPDATE SET name = source.name, description = source.description, " +
+                        "effective_date = source.effective_date, status = source.status " +
+                        "WHEN NOT MATCHED THEN " +
+                        "INSERT (id, name, description, effective_date, status) " +
+                        "VALUES (source.id, source.name, source.description, source.effective_date, source.status);")
+                .log("Upsert completed for order ID: ${body}");
     }
 }
