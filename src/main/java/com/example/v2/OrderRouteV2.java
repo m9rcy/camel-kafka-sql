@@ -12,8 +12,8 @@ import org.springframework.stereotype.Component;
 import java.time.OffsetDateTime;
 import java.util.*;
 
-//@Component
-public class OrderRoute extends RouteBuilder {
+@Component
+public class OrderRouteV2 extends RouteBuilder {
 
     // SQL constants for better readability
     private static final String MERGE_SQL = 
@@ -51,8 +51,8 @@ public class OrderRoute extends RouteBuilder {
         Faker faker = new Faker(new Locale("en-NZ"));
         
         from("timer:orderProducer?period={{timer.period}}")
-                .autoStartup(true)
-                .routeId("orderProducer")
+                .autoStartup(false)
+                .routeId("orderProducerV2")
                 .process(this::createRandomOrder)
                 .marshal().json(JsonLibrary.Jackson)
                 .log("Body before sending to Kafka ${body}")
@@ -63,6 +63,7 @@ public class OrderRoute extends RouteBuilder {
 
         // Consume data and process upsert
         from("kafka:order-demo?brokers=localhost:9092&groupId=my-group")
+                .routeId("orderConsumerV2")
                 .log("Received message from Kafka: ${body}")
                 .unmarshal().json(JsonLibrary.Jackson, OrderModel.class)
                 .to("bean-validator://ValidateModel")
@@ -78,6 +79,7 @@ public class OrderRoute extends RouteBuilder {
 
         // UPSERT order using MERGE statement
         from("direct:upsertOrder")
+                .routeId("upsertOrderV2")
                 .autoStartup(true)
                 .process(this::prepareUpsertParameters)
                 .to("sql:" + MERGE_SQL)

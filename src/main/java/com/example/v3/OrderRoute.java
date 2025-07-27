@@ -13,7 +13,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.*;
 
-@Component
+//@Component
 public class OrderRoute extends RouteBuilder {
 
     @Override

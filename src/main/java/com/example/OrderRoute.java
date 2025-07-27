@@ -4,11 +4,6 @@ import com.github.javafaker.Faker;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.kafka.KafkaConstants;
 import org.apache.camel.model.dataformat.JsonLibrary;
-import org.apache.camel.processor.aggregate.UseOriginalAggregationStrategy;
-import org.springframework.stereotype.Component;
-
-import javax.xml.transform.dom.DOMSource;
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.*;
 
