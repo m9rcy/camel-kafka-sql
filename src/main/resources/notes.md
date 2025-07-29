@@ -2,7 +2,7 @@
 -- SQL Server MERGE statement for upsert operation
 -- This can be used in your Camel route for more efficient upserts
 
-MERGE [Order] AS target
+MERGE [Orders] AS target
 USING (SELECT :id as id, :name as name, :description as description,
 :effectiveDate as effective_date, :status as status) AS source
 ON target.id = source.id

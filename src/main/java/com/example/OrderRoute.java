@@ -65,7 +65,7 @@ public class OrderRoute extends RouteBuilder {
 
         // SELECT all pending orders
         from("timer:fetchOrders?repeatCount=1").autoStartup(false)
-            .to("sql:SELECT * FROM [Order] WHERE status = 'PENDING'?outputClass=com.example.OrderEntity")
+            .to("sql:SELECT * FROM [Orders] WHERE status = 'PENDING'?outputClass=com.example.OrderEntity")
             .log("Fetched Order: ${body}");
 
         // INSERT sample order (you can call this from another route or REST endpoint)
@@ -80,7 +80,7 @@ public class OrderRoute extends RouteBuilder {
                 params.put("status", order.getStatus());
                 exchange.getIn().setBody(params);
             })
-            .to("sql:INSERT INTO [Order](id, name, description, effective_date, status) " +
+            .to("sql:INSERT INTO [Orders](id, name, description, effective_date, status) " +
                 "VALUES (:#id, :#name, :#description, :#effectiveDate, :#status)")
             .log("Inserted new order: ${body}");
 
@@ -95,7 +95,7 @@ public class OrderRoute extends RouteBuilder {
                     params.put("status", order.getStatus());
                     exchange.getIn().setBody(params);
                 })
-                .to("sql:MERGE [Order] AS target " +
+                .to("sql:MERGE [Orders] AS target " +
                         "USING (SELECT :#id as id, :#name as name, :#description as description, " +
                         ":#effectiveDate as effective_date, :#status as status) AS source " +
                         "ON target.id = source.id " +

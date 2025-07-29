@@ -15,9 +15,9 @@ USE CamelDemo;
 GO
 
 -- Create the Order table
-IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Order' AND xtype='U')
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Orders' AND xtype='U')
 BEGIN
-    CREATE TABLE [Order] (
+    CREATE TABLE [Orders] (
         id INT PRIMARY KEY,
         name NVARCHAR(255) NOT NULL,
         description NVARCHAR(1000),
@@ -30,9 +30,9 @@ END
 GO
 
 -- Insert sample data
-IF NOT EXISTS (SELECT 1 FROM [Order] WHERE id = 1)
+IF NOT EXISTS (SELECT 1 FROM [Orders] WHERE id = 1)
 BEGIN
-    INSERT INTO [Order] (id, name, description, effective_date, status)
+    INSERT INTO [Orders] (id, name, description, effective_date, status)
     VALUES (1, 'Sample Order', 'Initial test order', '2025-07-01', 'PENDING');
 END
 GO
@@ -40,7 +40,7 @@ GO
 -- Create an index for better performance
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Order_Status')
 BEGIN
-    CREATE INDEX IX_Order_Status ON [Order] (status);
+    CREATE INDEX IX_Order_Status ON [Orders] (status);
 END
 GO
 

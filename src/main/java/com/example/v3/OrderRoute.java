@@ -71,7 +71,7 @@ public class OrderRoute extends RouteBuilder {
 
         // SELECT all pending orders
         from("timer:fetchOrders?repeatCount=1").autoStartup(false)
-            .to("sql:SELECT * FROM [Order] WHERE status = 'PENDING'?outputClass=com.example.OrderEntity")
+            .to("sql:SELECT * FROM [Orders] WHERE status = 'PENDING'?outputClass=com.example.OrderEntity")
             .log("Fetched Order: ${body}");
 
         // UPSERT order - check if exists and needs update, then insert or update accordingly
@@ -84,7 +84,7 @@ public class OrderRoute extends RouteBuilder {
                 exchange.setProperty("newOrder", newOrder);
             })
             // First, check if record exists
-            .to("sql:SELECT id, name, description, effective_date, status FROM [Order] WHERE id = :#id?outputClass=com.example.OrderEntity")
+            .to("sql:SELECT id, name, description, effective_date, status FROM [Orders] WHERE id = :#id?outputClass=com.example.OrderEntity")
             .choice()
                 .when(simple("${body.size()} == 0"))
                     // Record doesn't exist - INSERT
@@ -108,7 +108,7 @@ public class OrderRoute extends RouteBuilder {
                 params.put("status", order.getStatus());
                 exchange.getIn().setBody(params);
             })
-            .to("sql:INSERT INTO [Order](id, name, description, effective_date, status) " +
+            .to("sql:INSERT INTO [Orders](id, name, description, effective_date, status) " +
                 "VALUES (:#id, :#name, :#description, :#effectiveDate, :#status)")
             .log("Inserted new order with ID: ${exchangeProperty.newOrder.id}");
 
@@ -158,7 +158,7 @@ public class OrderRoute extends RouteBuilder {
             .choice()
                 .when(header("needsUpdate").isEqualTo(true))
                     .log("Updating order with ID: ${exchangeProperty.newOrder.id} - Changes detected")
-                    .to("sql:UPDATE [Order] SET name = :#name, description = :#description, " +
+                    .to("sql:UPDATE [Orders] SET name = :#name, description = :#description, " +
                         "effective_date = :#effectiveDate, status = :#status WHERE id = :#id")
                     .log("Successfully updated order with ID: ${exchangeProperty.newOrder.id}")
                 .otherwise()

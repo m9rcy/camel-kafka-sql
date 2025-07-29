@@ -56,7 +56,7 @@ docker exec -it mssql-dev /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Y
 docker exec -it mssql-dev /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong!Passw0rd' -C -Q "USE CamelDemo; SELECT name FROM sys.tables WHERE name = 'Order';"
 
 # 7. Check sample data
-docker exec -it mssql-dev /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong!Passw0rd' -C -Q "USE CamelDemo; SELECT * FROM [Order];"
+docker exec -it mssql-dev /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong!Passw0rd' -C -Q "USE CamelDemo; SELECT * FROM [Orders];"
 
 # Alternative: Use Get-Content to read file and pipe to docker exec
 # Get-Content init-scripts/01-create-database.sql | docker exec -i mssql-dev /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong!Passw0rd' -C

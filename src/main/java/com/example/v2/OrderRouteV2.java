@@ -4,9 +4,11 @@ import com.example.OrderEntity;
 import com.example.OrderModel;
 import com.example.StatusEnum;
 import com.github.javafaker.Faker;
+import lombok.RequiredArgsConstructor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.kafka.KafkaConstants;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.time.OffsetDateTime;
@@ -15,9 +17,14 @@ import java.util.*;
 @Component
 public class OrderRouteV2 extends RouteBuilder {
 
+    @Value("${kafka-topic-name}")
+    private String topicName;
+    @Value("${spring.kafka.bootstrap-servers}")
+    private String brokerUrl;
+
     // SQL constants for better readability
     private static final String MERGE_SQL = 
-            "MERGE [Order] AS target " +
+            "MERGE [Orders] AS target " +
             "USING (" +
                 "SELECT :#id as id, " +
                        ":#name as name, " +
@@ -42,7 +49,7 @@ public class OrderRouteV2 extends RouteBuilder {
                 "VALUES (source.id, source.name, source.description, source.effective_date, source.status);";
 
     private static final String SELECT_PENDING_ORDERS = 
-            "SELECT * FROM [Order] WHERE status = 'PENDING'?outputClass=com.example.OrderEntity";
+            "SELECT * FROM [Orders] WHERE status = 'PENDING'?outputClass=com.example.OrderEntity";
 
     @Override
     public void configure() {
@@ -56,13 +63,13 @@ public class OrderRouteV2 extends RouteBuilder {
                 .process(this::createRandomOrder)
                 .marshal().json(JsonLibrary.Jackson)
                 .log("Body before sending to Kafka ${body}")
-                .to("kafka:order-demo?"
-                        + "brokers=localhost:9092"
+                .to(String.format("kafka:%s?"
+                        + "brokers=%s"
                         + "&valueSerializer=org.apache.kafka.common.serialization.StringSerializer"
-                        + "&keySerializer=org.apache.kafka.common.serialization.StringSerializer");
+                        + "&keySerializer=org.apache.kafka.common.serialization.StringSerializer", topicName, brokerUrl));
 
         // Consume data and process upsert
-        from("kafka:order-demo?brokers=localhost:9092&groupId=my-group")
+        from(String.format("kafka:%s?brokers=%s&groupId=my-group",topicName, brokerUrl))
                 .routeId("orderConsumerV2")
                 .log("Received message from Kafka: ${body}")
                 .unmarshal().json(JsonLibrary.Jackson, OrderModel.class)

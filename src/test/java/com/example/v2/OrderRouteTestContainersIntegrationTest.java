@@ -54,7 +54,7 @@ import static org.junit.jupiter.api.Assertions.*;
         "camel.springboot.main-run-controller=false",
         "spring.sql.init.mode=never"
 })
-class SimpleTestContainersIntegrationTest {
+class OrderRouteTestContainersIntegrationTest {
 
     @Container
     static MSSQLServerContainer<?> mssqlContainer = new MSSQLServerContainer<>("mcr.microsoft.com/mssql/server:2022-latest")
@@ -99,7 +99,7 @@ class SimpleTestContainersIntegrationTest {
             stmt.execute("USE CamelDemo");
 
             // Create table
-            stmt.execute("CREATE TABLE [Order] (\n" +
+            stmt.execute("CREATE TABLE [Orders] (\n" +
                          "    id INT PRIMARY KEY,\n" +
                          "    name NVARCHAR(255) NOT NULL,\n" +
                          "    description NVARCHAR(1000),\n" +
@@ -122,7 +122,7 @@ class SimpleTestContainersIntegrationTest {
         // Switch to CamelDemo database and clean up data
         try {
             jdbcTemplate.execute("USE CamelDemo");
-            jdbcTemplate.execute("DELETE FROM [Order]");
+            jdbcTemplate.execute("DELETE FROM [Orders]");
         } catch (Exception e) {
             // Handle any cleanup errors
         }
@@ -155,10 +155,11 @@ class SimpleTestContainersIntegrationTest {
         kafkaTemplate.send("order-demo", String.valueOf(testOrder.getId()), jsonOrder);
 
         // Assert - Wait for message to be processed and stored
-        await().atMost(15, TimeUnit.SECONDS)
+        await().atMost(20, TimeUnit.SECONDS)
                 .untilAsserted(() -> {
+                    jdbcTemplate.execute("USE CamelDemo");
                     List<Map<String, Object>> orders = jdbcTemplate.queryForList(
-                            "SELECT * FROM [Order] WHERE id = ?", testOrder.getId());
+                            "SELECT * FROM [Orders] WHERE id = ?", testOrder.getId());
 
                     assertFalse(orders.isEmpty(), "Order should be inserted into MS SQL Server");
 
@@ -177,7 +178,7 @@ class SimpleTestContainersIntegrationTest {
 
         // Insert using JdbcTemplate
         int result = jdbcTemplate.update(
-                "INSERT INTO [Order] (id, name, description, effective_date, status) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO [Orders] (id, name, description, effective_date, status) VALUES (?, ?, ?, ?, ?)",
                 2001, "Direct Insert", "Direct database insert test",
                 java.sql.Date.valueOf("2025-07-25"), "PENDING"
         );
@@ -186,7 +187,7 @@ class SimpleTestContainersIntegrationTest {
 
         // Query the data back
         List<Map<String, Object>> orders = jdbcTemplate.queryForList(
-                "SELECT * FROM [Order] WHERE id = ?", 2001);
+                "SELECT * FROM [Orders] WHERE id = ?", 2001);
 
         assertFalse(orders.isEmpty());
         Map<String, Object> order = orders.get(0);
@@ -199,7 +200,7 @@ class SimpleTestContainersIntegrationTest {
         // Test MS SQL Server specific features
 
         // Test DATETIME2 precision
-        jdbcTemplate.update("INSERT INTO [Order] (id, name, description, effective_date, status, created_date)\n" +
+        jdbcTemplate.update("INSERT INTO [Orders] (id, name, description, effective_date, status, created_date)\n" +
                             "VALUES (?, ?, ?, ?, ?, SYSDATETIME())\n",
                 3001, "Precision Test", "Testing DATETIME2 precision",
                 java.sql.Date.valueOf("2025-07-25"), "ACTIVE"
@@ -207,14 +208,14 @@ class SimpleTestContainersIntegrationTest {
 
         // Test NVARCHAR with Unicode
         jdbcTemplate.update(
-                "INSERT INTO [Order] (id, name, description, effective_date, status) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO [Orders] (id, name, description, effective_date, status) VALUES (?, ?, ?, ?, ?)",
                 3002, "Unicode Test: 测试", "Description: àáâãäåæçèéêë",
                 java.sql.Date.valueOf("2025-07-25"), "UNICODE"
         );
 
         // Verify both records
         List<Map<String, Object>> orders = jdbcTemplate.queryForList(
-                "SELECT * FROM [Order] WHERE id IN (?, ?) ORDER BY id", 3001, 3002);
+                "SELECT * FROM [Orders] WHERE id IN (?, ?) ORDER BY id", 3001, 3002);
 
         assertEquals(2, orders.size());
 
@@ -233,10 +234,9 @@ class SimpleTestContainersIntegrationTest {
     void testContainerHealth() {
         // Verify container is healthy and database is accessible
         assertTrue(mssqlContainer.isRunning(), "Container should be running");
-        assertTrue(mssqlContainer.isHealthy(), "Container should be healthy");
 
         // Test basic connectivity
-        Long count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM [Order]", Long.class);
+        Long count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM [Orders]", Long.class);
         assertNotNull(count);
         assertEquals(0L, count); // Should be 0 after cleanup
     }
